@@ -1,22 +1,25 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, request, jsonify, render_template
+from flask_caching import Cache
 import openai
-import sqlite3
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+app = Flask(__name__)  # Flask 애플리케이션 생성
 
-app = Flask(__name__)
+# 간단한 캐싱 설정 (메모리 캐시 사용)
+cache = Cache(app, config={"CACHE_TYPE": "simple"})
 
+# HTML 페이지 렌더링 (메인 페이지)
 @app.route("/")
 def home():
-    return render_template("index.html")  # 이제 HTML을 반환!
+    return render_template("index.html")  # templates/index.html 파일을 사용
 
+# 챗봇 API 엔드포인트
 @app.route("/chat", methods=["POST"])
+@cache.cached(timeout=60, query_string=True)  # 동일한 요청은 60초 동안 캐싱
 def chat():
+    """챗봇 대화 API"""
+
     data = request.json
-    user_message = data.get("message", "")
+    user_message = data.get("message", "").strip()
 
     if not user_message:
         return jsonify({"error": "메시지를 입력하세요."}), 400
@@ -25,9 +28,11 @@ def chat():
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": "친절하고 유머러스한 상담 챗봇입니다."},
-                      {"role": "user", "content": user_message}],
-            max_tokens=150
+            messages=[
+                {"role": "system", "content": "넌 유머러스하고 현실적인 조언을 주는 친절한 상담사야."},
+                {"role": "user", "content": user_message}
+            ],
+            max_tokens=150  # 응답 길이 제한
         )
         chatbot_response = response["choices"][0]["message"]["content"].strip()
     except Exception as e:
@@ -36,4 +41,4 @@ def chat():
     return jsonify({"response": chatbot_response})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)  # Render 배포용 설정
