@@ -42,3 +42,8 @@ def chat():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)  # Render 배포용 설정
+
+@app.route("/chat", methods=["GET", "POST"])
+def chat():
+    if request.method == "GET":
+        return jsonify({"message": "이 엔드포인트는 POST 요청을 사용해야 합니다."})
